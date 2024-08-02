@@ -1,5 +1,6 @@
 
 import pandas as pd
+from openpyxl import load_workbook, Workbook
 import os
 
 from utils.employee_utils import *
@@ -147,8 +148,9 @@ def print_menu():
 4. Mostrar Entradas
 5. Mostrar Salidas
 6. Mostrar Entradas de la Semana
-7. Tools (Completar EAN)
-8. Salir
+7. Exportar a excel
+8. Tools (Completar EAN)
+9. Salir
 ''')
 
 
@@ -250,13 +252,34 @@ def main():
         elif option == '7':
             clear()
             print_header(pdf_path, amount_self, day)
+
+            for _day in day_list:
+                print(f"-------------------------------{_day}-------------------------------")
+                _day_schedule = DaySchedule(cajeros_df, _day)
+                _sorted_schedule = _day_schedule.get_available_employees().sort_values(by="Entrada")[["Nombre", "Entrada", "Salida"]]
+                if (_sorted_schedule.empty):
+                    print("No hay empleados disponibles")
+                else:
+                    try:
+                        os.makedirs("Exportados")
+                    except:
+                        pass
+                    format_schedule(_sorted_schedule).to_excel(f"./Exportados/Schedule_{_day}.xlsx", index=False)
+                    print("Exportado correctamente")
+                print("\n\n")
+
+            input('Presione Enter para continuar...')
+
+        elif option == '8':
+            clear()
+            print_header(pdf_path, amount_self, day)
             cod = input("Ingrese el código EAN-12: ")
             ean13 = get_ean13(cod)
             print(f"El código EAN-13 es: {ean13}")
             input("Presione cualquier tecla para continuar...")
 
-        elif option == '8':
-            break
+        elif option == '9':
+            break            
 
         else:
             pass
