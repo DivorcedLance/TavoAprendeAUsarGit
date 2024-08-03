@@ -147,10 +147,11 @@ def print_menu():
 3. Seleccionar Dia (L-D)
 4. Mostrar Entradas
 5. Mostrar Salidas
-6. Mostrar Entradas de la Semana
+6. Entradas-Salidas de la Semana
 7. Exportar a excel
-8. Tools (Completar EAN)
-9. Salir
+8. Entradas-Salidas por día Consola
+9. Tools (Completar EAN)
+10. Salir
 ''')
 
 
@@ -167,7 +168,7 @@ def print_header(pdf_path, amount_self, day):
 pdf_path = r"./horarios/Horario 01-07.24.pdf"
 amount_self = 6
 cajeros_df = get_cajeros_df(pdf_path, amount_self)
-day = "Lunes"
+day = "Martes"
 day_schedule = DaySchedule(cajeros_df, day)
 day_list = ["Lunes", "Martes", "Miércoles",
             "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -256,21 +257,58 @@ def main():
             for _day in day_list:
                 print(f"-------------------------------{_day}-------------------------------")
                 _day_schedule = DaySchedule(cajeros_df, _day)
-                _sorted_schedule = _day_schedule.get_available_employees().sort_values(by="Entrada")[["Nombre", "Entrada", "Salida"]]
-                if (_sorted_schedule.empty):
+                _available_employees = _day_schedule.get_available_employees()
+                if (_available_employees.empty):
                     print("No hay empleados disponibles")
                 else:
                     try:
                         os.makedirs("Exportados")
                     except:
                         pass
-                    format_schedule(_sorted_schedule).to_excel(f"./Exportados/Schedule_{_day}.xlsx", index=False)
+                    _sorted_schedule = _available_employees.sort_values(by="Entrada")[["Nombre", "Entrada", "Salida"]]
+                    format_schedule(_sorted_schedule).to_excel(f"./Exportados/{_day}Entradas.xlsx", index=False)
+                    _sorted_schedule = _available_employees.sort_values(by="Salida")[["Nombre", "Salida", "Entrada"]]
+                    format_schedule(_sorted_schedule).to_excel(f"./Exportados/{_day}Salidas.xlsx", index=False)
                     print("Exportado correctamente")
                 print("\n\n")
 
             input('Presione Enter para continuar...')
-
+        
         elif option == '8':
+            clear()
+            print_header(pdf_path, amount_self, day)
+
+            event_hours = set()
+            for employee in pd.DataFrame(day_schedule.get_available_employees()).iterrows():
+                event_hours.add(employee[1]["Entrada"])
+                event_hours.add(employee[1]["Salida"])
+
+            event_hours = sorted(list(event_hours))
+            if len(event_hours) > 0:
+                for event_hour in event_hours:
+                    entran_list = []
+                    salen_list = []
+                    print(f"-------------------------------{event_hour.strftime('%I:%M%p')}-------------------------------")
+                    for employee in pd.DataFrame(day_schedule.get_available_employees()).iterrows():
+                        if employee[1]["Entrada"] == event_hour:
+                            entran_list.append(f"\t{employee[1]['Nombre']}")
+                    for employee in pd.DataFrame(day_schedule.get_available_employees()).iterrows():
+                        if employee[1]["Salida"] == event_hour:
+                            salen_list.append(f"\t{employee[1]['Nombre']}")
+                    if len(entran_list) > 0:
+                        print("Entradas:")
+                        for entran in entran_list:
+                            print(entran)
+                    if len(salen_list) > 0:
+                        print("Salidas:")
+                        for salen in salen_list:
+                            print(salen)
+            else:
+                print("No hay empleados disponibles")
+            
+            input('Presione Enter para continuar...')
+
+        elif option == '9':
             clear()
             print_header(pdf_path, amount_self, day)
             cod = input("Ingrese el código EAN-12: ")
@@ -278,7 +316,41 @@ def main():
             print(f"El código EAN-13 es: {ean13}")
             input("Presione cualquier tecla para continuar...")
 
-        elif option == '9':
+        elif option == '10':
+            clear()
+            print_header(pdf_path, amount_self, day)
+
+            while(True):
+                cod_id = input("Ingrese identificador (7 dígitos): ")
+                if (len(cod_id) != 7):
+                    print("Error: El identificador debe tener 7 dígitos")
+                    continue
+                try:
+                    int(cod_id)
+                except:
+                    print("Error: El identificador debe ser un número")
+                    continue
+                break
+            
+            while(True):
+                cod_weight = input("Ingrese el peso (5 dígitos): ")
+                if (len(cod_weight) > 5):
+                    print("Error: El peso debe tener menos de 5 dígitos")
+                    continue
+                elif (len(cod_weight) < 5):
+                    cod_weight = cod_weight.zfill(5)
+                try:
+                    int(cod_weight)
+                except:
+                    print("Error: El peso debe ser un número")
+                    continue
+                break
+            
+            ean13 = get_ean13(cod_id + cod_weight)
+            print(f"El código EAN-13 es: {ean13}")
+            input("Presione cualquier tecla para continuar...")
+
+        elif option == '11':
             break            
 
         else:
